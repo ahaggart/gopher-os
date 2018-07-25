@@ -133,11 +133,16 @@ func Init() {
 	installIDT()
 }
 
+func HandleInterrupt(intNumber InterruptNumber, istOffset uint8, handler func(*Registers)) {
+	kfmt.Printf("Registering interrupt handler for %d\n", int(intNumber))
+	handleInterrupt(intNumber, istOffset, handler)
+}
+
 // HandleInterrupt ensures that the provided handler will be invoked when a
 // particular interrupt number occurs. The value of the istOffset argument
 // specifies the offset in the interrupt stack table (if 0 then IST is not
 // used).
-func HandleInterrupt(intNumber InterruptNumber, istOffset uint8, handler func(*Registers))
+func handleInterrupt(intNumber InterruptNumber, istOffset uint8, handler func(*Registers))
 
 // installIDT populates idtDescriptor with the address of IDT and loads it to
 // the CPU. All gate entries are initially marked as non-present and must be

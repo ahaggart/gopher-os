@@ -15,6 +15,8 @@ var (
 	errKmainReturned = &kernel.Error{Module: "kmain", Message: "Kmain returned"}
 )
 
+var z uint8
+
 // Kmain is the only Go symbol that is visible (exported) from the rt0 initialization
 // code. This function is invoked by the rt0 assembly code after setting up the GDT
 // and setting up a a minimal g0 struct that allows Go code using the 4K stack
@@ -33,11 +35,16 @@ func Kmain(multibootInfoPtr, kernelStart, kernelEnd, kernelPageOffset uintptr) {
 
 	var err *kernel.Error
 	gate.Init()
+
 	if err = pmm.Init(kernelStart, kernelEnd); err != nil {
 		panic(err)
-	} else if err = vmm.Init(kernelPageOffset); err != nil {
+	}
+
+	if err = vmm.Init(kernelPageOffset); err != nil {
 		panic(err)
-	} else if err = goruntime.Init(); err != nil {
+	}
+
+	if err = goruntime.Init(); err != nil {
 		panic(err)
 	}
 
@@ -50,4 +57,21 @@ func Kmain(multibootInfoPtr, kernelStart, kernelEnd, kernelPageOffset uintptr) {
 
 	// Detect and initialize hardware
 	hal.DetectHardware()
+
+	gate.HandleInterrupt(
+		0,
+		0,
+		func(regs *gate.Registers) {
+			kfmt.Printf("handling divide-by-zero\n")
+		},
+	)
+
+	z++
+	z--
+	var num = 129 / z
+	num++
+	num++
+
+	for {
+	}
 }

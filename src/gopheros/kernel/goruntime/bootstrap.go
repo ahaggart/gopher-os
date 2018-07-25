@@ -64,7 +64,7 @@ func sysReserve(_ unsafe.Pointer, size uintptr, reserved *bool) unsafe.Pointer {
 // sysMap establishes a copy-on-write mapping for a particular memory region
 // that has been reserved previously via a call to sysReserve.
 //
-// This function replaces runtime.sysReserve and is required for initializing
+// This function replaces runtime.sysMap and is required for initializing
 // the Go allocator.
 //
 //go:redirect-from runtime.sysMap
@@ -94,7 +94,7 @@ func sysMap(virtAddr unsafe.Pointer, size uintptr, reserved bool, sysStat *uint6
 // and establishes a contiguous virtual page mapping for them returning back
 // the pointer to the virtual region start.
 //
-// This function replaces runtime.sysMap and is required for initializing the
+// This function replaces runtime.sysAlloc and is required for initializing the
 // Go allocator.
 //
 //go:redirect-from runtime.sysAlloc
@@ -155,7 +155,7 @@ func getRandomData(r []byte) {
 
 // Init enables support for various Go runtime features. After a call to init
 // the following runtime features become available for use:
-//  - heap memory allocation (new, make e.t.c)
+//  - heap memory allocation (new, make, etc)
 //  - map primitives
 //  - interfaces
 func Init() *kernel.Error {

@@ -16,3 +16,5 @@ pkg/
 # build folders and vagrant data dir
 build/
 .vagrant
+
+**/.vscode

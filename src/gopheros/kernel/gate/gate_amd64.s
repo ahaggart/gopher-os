@@ -43,7 +43,7 @@ TEXT ·installIDT(SB),NOSPLIT,$0
 // particular interrupt number occurs. The value of the istOffset argument
 // specifies the offset in the interrupt stack table (if 0 then IST is not
 // used).
-TEXT ·HandleInterrupt(SB),NOSPLIT,$0-10
+TEXT ·handleInterrupt(SB),NOSPLIT,$0-10
 	MOVBQZX intNumber+0(FP), CX 
 	
 	// Dereference pointer to trap handler and copy it into gateHandlers
