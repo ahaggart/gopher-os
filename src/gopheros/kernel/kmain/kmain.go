@@ -9,13 +9,13 @@ import (
 	"gopheros/kernel/mm/pmm"
 	"gopheros/kernel/mm/vmm"
 	"gopheros/multiboot"
+
+	"gopheros/kernel/syscall"
 )
 
 var (
 	errKmainReturned = &kernel.Error{Module: "kmain", Message: "Kmain returned"}
 )
-
-var z uint8
 
 // Kmain is the only Go symbol that is visible (exported) from the rt0 initialization
 // code. This function is invoked by the rt0 assembly code after setting up the GDT
@@ -58,19 +58,9 @@ func Kmain(multibootInfoPtr, kernelStart, kernelEnd, kernelPageOffset uintptr) {
 	// Detect and initialize hardware
 	hal.DetectHardware()
 
-	gate.HandleInterrupt(
-		0,
-		0,
-		func(regs *gate.Registers) {
-			kfmt.Printf("handling divide-by-zero\n")
-		},
-	)
+	syscall.InitSyscalls()
 
-	z++
-	z--
-	var num = 129 / z
-	num++
-	num++
+	syscall.Interrupt()
 
 	for {
 	}

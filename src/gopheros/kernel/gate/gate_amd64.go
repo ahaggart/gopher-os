@@ -125,6 +125,9 @@ const (
 	// occurs while CR4.OSXMMEXCPT is set to 1. If the OSXMMEXCPT bit is
 	// not set, SIMD FP exceptions cause InvalidOpcode exceptions instead.
 	SIMDFloatingPointException = InterruptNumber(19)
+
+	// Syscall is the legacy Linux syscall interrupt number
+	Syscall = InterruptNumber(0x80)
 )
 
 // Init runs the appropriate CPU-specific initialization code for enabling
