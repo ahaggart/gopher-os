@@ -108,7 +108,7 @@ func (pdt PageDirectoryTable) Map(page mm.Page, frame mm.Frame, flags PageTableE
 	return err
 }
 
-// Unmap removes a mapping previousle installed by a call to Map() on this PDT.
+// Unmap removes a mapping previously installed by a call to Map() on this PDT.
 // This method behaves in a similar fashion to the global Unmap() function with
 // the difference that it also supports inactive page PDTs by establishing a
 // temporary mapping so that Unmap() can access the inactive PDT entries.
@@ -316,7 +316,7 @@ var (
 type pageTableWalker func(pteLevel uint8, pte *pageTableEntry) bool
 
 // walk performs a page table walk for the given virtual address. It calls the
-// suppplied walkFn with the page table entry that corresponds to each page
+// supplied walkFn with the page table entry that corresponds to each page
 // table level. If walkFn returns an error then the walk is aborted and the
 // error is returned to the caller.
 func walk(virtAddr uintptr, walkFn pageTableWalker) {
