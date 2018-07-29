@@ -2,8 +2,11 @@
 package amd64paging
 
 const (
-	// PageSize is the page size for amd64 processors
+	// PageSize is the page size in bytes for amd64 processors
 	PageSize = 4096
+
+	// EntrySize is the size of a table entry in bytes
+	EntrySize = 8
 
 	// L4 table index bits and size
 	L4MSB  = 47
@@ -25,13 +28,6 @@ const (
 	OffsetMSB  = 11
 	OffsetSize = OffsetMSB
 )
-
-// PML4 is the Go representation of the amd64 L4 page directory table
-type PML4 struct {
-}
-
-// PML4Entry is an entry in the PML4 table, pointing to an L3 table
-type PML4Entry uint64
 
 // PageDirectoryPointerTable is the L3 amd64 page table
 type PageDirectoryPointerTable struct {

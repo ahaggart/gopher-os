@@ -8,10 +8,6 @@ type Table struct {
 	entries [PageSize / 8]TableEntry
 }
 
-func BootstrapL1(t *Table, p Address) {
-
-}
-
 // Map points a virtual address to a physical address
 func (t *Table) Map(v Address, p Address, flags L1Flags) {
 	entry := t.getTableEntry(v)
