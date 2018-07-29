@@ -257,7 +257,7 @@ _rt0_populate_initial_page_tables:
 	; Also map the addresses starting at PAGE_OFFSET to the same P3 table. 
 	; To find the P4 index for PAGE_OFFSET we need to extract bits 39-47
 	; of its address.
-	mov ecx, (PAGE_OFFSET >> 39) & 511
+	mov ecx, (PAGE_OFFSET >> 39) & 0x01FF
 	mov [ebx + ecx*8], eax 
 
 	; The CPU uses bits 30-38 as an index to the P3 table. We just need to map 
@@ -292,9 +292,9 @@ _rt0_enter_long_mode:
 	mov eax, page_table_l4 - PAGE_OFFSET
 	mov cr3, eax  
 
-	; Enable PAE support 
+	; Enable PAE support (bit 5) and PCIDE support (bit 16)
 	mov eax, cr4 
-	or eax, 1 << 5
+	or eax, (1 << 5) | (1 << 16)
 	mov cr4, eax
 
 	; Now enable long mode (bit 8) and the no-execute support (bit 11) by 
