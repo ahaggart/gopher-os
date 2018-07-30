@@ -1,19 +1,37 @@
 package amd64paging
 
 const (
-	// NumEntriesL4 is the number of entries in the L4 page table
-	NumEntriesL4 = PageSize / EntrySize
+	// SelfAddressBase is the base for building recursive self-referential
+	//  pointers
+	SelfAddressBase = ^Address(1<<48 - 1)
 )
 
 // PML4 is the Go representation of the amd64 L4 page directory table
-type PML4 struct {
-	entries [NumEntriesL4]PML4Entry
+type PML4 BaseTable
+
+// Bootstrap creates a recursive mapping to allow self-referential page tables
+func (pm *PML4) Bootstrap(p Address) {
+	entry := &pm[SelfAddressIndex]
+	entry.SetAddress(p)
 }
 
-// PML4Entry is an entry in the PML4 table, pointing to an L3 table
-type PML4Entry uint64
+// Self returns the physical address of this page table
+func (pm *PML4) Self() (p Address) {
+	return pm[SelfAddressIndex].Address()
+}
 
-// Bootstrap creates a recursize mapping to allow self-referential page tables
-func (pdt *PML4) Bootstrap(p Address) {
+func (pm *PML4) getL3() *PageDirectoryPointerTable {
 
+}
+
+func buildSelfAddress(level int) Address {
+	return SelfAddressBase.withL4Index(
+		0,
+	).withL3Index(
+		0,
+	).withL2Index(
+		0,
+	).withL1Index(
+		0,
+	)
 }
