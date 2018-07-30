@@ -1,13 +1,12 @@
 package amd64paging
 
-// L1Flags is the Go representation of the permissions flags for an L1 PTE
-type L1Flags uint8
+import "unsafe"
 
 // Table is the amd64 L1 page table
 type Table BaseTable
 
 // Map points a virtual address to a physical address
-func (t *Table) Map(v Address, p Address, flags L1Flags) {
+func (t *Table) Map(v Address, p Address, flags uint64) {
 	entry := t.getTableEntry(v)
 	entry.SetAddress(p)
 	entry.SetFlags(flags)
@@ -30,4 +29,15 @@ func (t *Table) getTableEntry(v Address) *TableEntry {
 func createAddress(te TableEntry, offset Address) Address {
 	frame := Address(te & ^TableEntry(0xFFF))
 	return frame | (offset & 0xFFF)
+}
+
+// Step returns a virtual address the L3 table at the given index
+func (t *Table) Step(base Address, idx, flags uint64) (*TableEntry, error) {
+	// ignore the supplied base and use a fresh recurse base
+	te, err := (*BaseTable)(t).Step(base, idx, flags)
+	return (*TableEntry)(te), err
+}
+
+func (t *Table) toAddress() Address {
+	return Address(uintptr(unsafe.Pointer(t)))
 }
