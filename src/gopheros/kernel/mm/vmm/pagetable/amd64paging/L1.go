@@ -5,6 +5,11 @@ import "unsafe"
 // Table is the amd64 L1 page table
 type Table BaseTable
 
+// ptrToTableEntry is a testing hook to redirect recursive page table traversal
+var ptrToTableEntry = func(ptr unsafe.Pointer) *TableEntry {
+	return (*TableEntry)(ptr)
+}
+
 // Map points a virtual address to a physical address
 func (t *Table) Map(v Address, p Address, flags uint64) {
 	entry := t.getTableEntry(v)
@@ -32,10 +37,10 @@ func createAddress(te TableEntry, offset Address) Address {
 }
 
 // Step returns a virtual address the L3 table at the given index
-func (t *Table) Step(base Address, idx, flags uint64) (*TableEntry, error) {
+func (t *Table) Step(idx, flags uint64) (*TableEntry, error) {
 	// ignore the supplied base and use a fresh recurse base
-	te, err := (*BaseTable)(t).Step(base, idx, flags)
-	return (*TableEntry)(te), err
+	te, err := (*BaseTable)(t).Step(idx, flags)
+	return ptrToTableEntry(te), err
 }
 
 func (t *Table) toAddress() Address {

@@ -147,7 +147,7 @@ func (addr Address) toPointer() unsafe.Pointer {
 type BaseTable [NumEntries]TableEntry
 
 // Step returns a virtual address the L3 table at the given index
-func (bt *BaseTable) Step(base Address, idx, flags uint64) (unsafe.Pointer, error) {
+func (bt *BaseTable) Step(idx, flags uint64) (unsafe.Pointer, error) {
 	if te := bt[idx]; te == NilMapping {
 		// check if the mapping exists
 		return nil, NotMappedError{}
@@ -158,9 +158,13 @@ func (bt *BaseTable) Step(base Address, idx, flags uint64) (unsafe.Pointer, erro
 
 	}
 	idx = (idx & tableIndexMask) << L1LSB
-	addr := (base << tableIndexSize) | Address(idx)
+	addr := (bt.toAddress() << tableIndexSize) | Address(idx)
 
 	return addr.toPointer(), nil
+}
+
+func (bt *BaseTable) toAddress() Address {
+	return Address(uintptr(unsafe.Pointer(bt)))
 }
 
 // TableEntry is the base type for amd64 page table entries

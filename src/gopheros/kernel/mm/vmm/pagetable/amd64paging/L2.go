@@ -5,11 +5,16 @@ import "unsafe"
 // PageDirectory is the amd64 L2 page table
 type PageDirectory BaseTable
 
+// ptrToTable is a testing hook for redirecting recursive page table traversal
+var ptrToTable = func(ptr unsafe.Pointer) *Table {
+	return (*Table)(ptr)
+}
+
 // Step returns a virtual address the L1 table at the given index
-func (pd *PageDirectory) Step(base Address, idx, flags uint64) (*Table, error) {
+func (pd *PageDirectory) Step(idx, flags uint64) (*Table, error) {
 	// ignore the supplied base and use a fresh recurse base
-	t, err := (*BaseTable)(pd).Step(base, idx, flags)
-	return (*Table)(t), err
+	t, err := (*BaseTable)(pd).Step(idx, flags)
+	return ptrToTable(t), err
 }
 
 func (pd *PageDirectory) toAddress() Address {
