@@ -16,7 +16,7 @@ func (pd *PageDirectory) Map(v Address, p Address, flags uint64) error {
 	idx := v.getL2Index()
 
 	// check that the mapping exists in this table
-	if err := (*BaseTable)(pd).GetMapping(idx); err != nil {
+	if err := (*BaseTable)(pd).GetMapping(idx, flags); err != nil {
 		return err
 	}
 

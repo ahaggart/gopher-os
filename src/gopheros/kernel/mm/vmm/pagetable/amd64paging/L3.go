@@ -11,7 +11,7 @@ func (pdpt *PageDirectoryPointerTable) Map(v Address, p Address, flags uint64) e
 	idx := v.getL3Index()
 
 	// check that the mapping exists in this table
-	if err := (*BaseTable)(pdpt).GetMapping(idx); err != nil {
+	if err := (*BaseTable)(pdpt).GetMapping(idx, flags); err != nil {
 		return err
 	}
 

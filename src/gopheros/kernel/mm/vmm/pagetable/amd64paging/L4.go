@@ -36,7 +36,7 @@ func (pm *PML4) Map(v Address, p Address, flags uint64) error {
 	idx := v.getL4Index()
 
 	// check that the mapping exists in this table
-	if err := (*BaseTable)(pm).GetMapping(idx); err != nil {
+	if err := (*BaseTable)(pm).GetMapping(idx, flags); err != nil {
 		return err
 	}
 

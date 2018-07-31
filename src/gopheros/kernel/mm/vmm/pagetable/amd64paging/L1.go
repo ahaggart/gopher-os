@@ -15,11 +15,12 @@ var ptrToTableEntry = func(ptr unsafe.Pointer) *TableEntry {
 func (t *Table) Map(v Address, p Address, flags uint64) error {
 	idx := v.getL1Index()
 
-	// check that the mapping exists in this table
-	if err := (*BaseTable)(t).GetMapping(idx); err != nil {
-		return err
+	// if the virtual address is already mapped, return an error
+	if t[idx] != NilMapping {
+		return mappingCollisionError
 	}
 
+	t[idx] = newTableEntry(p, flags)
 	return nil
 }
 
@@ -52,3 +53,13 @@ func (t *Table) Step(v Address, flags uint64) (*TableEntry, error) {
 func (t *Table) toAddress() Address {
 	return Address(uintptr(unsafe.Pointer(t)))
 }
+
+// MappingCollisionError is a type for reporting an attempt to map an address
+//  that already has a mapping
+type MappingCollisionError string
+
+func (mce MappingCollisionError) Error() string {
+	return string(mce)
+}
+
+var mappingCollisionError MappingCollisionError = "Error: Address already mapped"

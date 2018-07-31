@@ -122,16 +122,16 @@ func (bt *BaseTable) Step(idx, flags uint64) (unsafe.Pointer, error) {
 
 // GetMapping checks for a mapping at the given index, and adds on if it
 //  does not exist
-func (bt *BaseTable) GetMapping(idx uint64) error {
+func (bt *BaseTable) GetMapping(idx, flags uint64) error {
 	if bt[idx] == NilMapping {
-		if frame, err := mm.AllocFrame(); err == nil {
-			bt[idx] = newTableEntry(
-				Address(frame),
-				pageTableFlags,
-			)
-		} else {
-			// error
+		frame, err := mm.AllocFrame()
+		if err != nil {
+			return err
 		}
+		bt[idx] = newTableEntry(
+			Address(frame),
+			flags,
+		)
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (te *TableEntry) Flags() uint64 {
 
 // for now just mask off the lower 8 bits
 func makePermissionsError(flags uint64) pagetable.PermissionsError {
-	return pagetable.PermissionsError(flags & 0xFF)
+	return pagetable.PermissionsError(flags & 0xFFF)
 }
 
 func newTableEntry(addr Address, flags uint64) (entry TableEntry) {

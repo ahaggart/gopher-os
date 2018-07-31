@@ -8,7 +8,7 @@ import (
 func TestL4Phys(t *testing.T) {
 	pm := &PML4{}
 
-	testAddress := Address(0x0000123456789876000)
+	testAddress := Address(0x0000123456789000)
 
 	pm.Bootstrap(testAddress)
 
