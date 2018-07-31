@@ -10,17 +10,23 @@ var ptrToTableEntry = func(ptr unsafe.Pointer) *TableEntry {
 	return (*TableEntry)(ptr)
 }
 
-// Map points a virtual address to a physical address
-func (t *Table) Map(v Address, p Address, flags uint64) {
-	entry := t.getTableEntry(v)
-	entry.SetAddress(p)
-	entry.SetFlags(flags)
+// Map recursively adds a mapping from the given virtual address to the given
+//  physical address, with the given access flags
+func (t *Table) Map(v Address, p Address, flags uint64) error {
+	idx := v.getL1Index()
+
+	// check that the mapping exists in this table
+	if err := (*BaseTable)(t).GetMapping(idx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // walk returns the physical address for a given virtual address, mirroring
 //  the behavior of the CPU page walk for an amd64 processor
 func (t *Table) walk(v Address) (p Address) {
-	offset := v.getOffset()
+	offset := v.offset()
 	te := t.getTableEntry(v)
 	return createAddress(*te, offset)
 }
@@ -37,9 +43,9 @@ func createAddress(te TableEntry, offset Address) Address {
 }
 
 // Step returns a virtual address the L3 table at the given index
-func (t *Table) Step(idx, flags uint64) (*TableEntry, error) {
+func (t *Table) Step(v Address, flags uint64) (*TableEntry, error) {
 	// ignore the supplied base and use a fresh recurse base
-	te, err := (*BaseTable)(t).Step(idx, flags)
+	te, err := (*BaseTable)(t).Step(v.getL1Index(), flags)
 	return ptrToTableEntry(te), err
 }
 

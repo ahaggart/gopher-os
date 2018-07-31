@@ -1,6 +1,8 @@
 package amd64paging
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // Convenience constants for building recursive addresses
 const (
@@ -28,9 +30,29 @@ func (pm *PML4) Phys() (p Address) {
 	return pm[SelfAddressIndex].Address()
 }
 
+// Map recursively adds a mapping from the given virtual address to the given
+//  physical address, with the given access flags
+func (pm *PML4) Map(v Address, p Address, flags uint64) error {
+	idx := v.getL4Index()
+
+	// check that the mapping exists in this table
+	if err := (*BaseTable)(pm).GetMapping(idx); err != nil {
+		return err
+	}
+
+	// step into the page table mapped for the given virtual address
+	pdpt, err := pm.Step(v, pageTableFlags)
+	if err != nil {
+		return err
+	}
+
+	// add mapping at next paging level
+	return pdpt.Map(v, p, flags)
+}
+
 // Step returns a virtual address the L3 table at the given index
-func (pm *PML4) Step(idx, flags uint64) (*PageDirectoryPointerTable, error) {
+func (pm *PML4) Step(v Address, flags uint64) (*PageDirectoryPointerTable, error) {
 	// ignore the supplied base and use a fresh recurse base
-	pdpt, err := (*BaseTable)(pm).Step(idx, flags)
+	pdpt, err := (*BaseTable)(pm).Step(v.getL4Index(), flags)
 	return ptrToPDPT(pdpt), err
 }

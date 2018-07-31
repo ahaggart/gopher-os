@@ -2,6 +2,7 @@
 package amd64paging
 
 import (
+	"gopheros/kernel/mm"
 	"gopheros/kernel/mm/vmm/pagetable"
 	"unsafe"
 )
@@ -12,8 +13,10 @@ const (
 
 	// EntrySize is the size of a table entry in bytes
 	EntrySize = 8
+)
 
-	// L4 table index bits and size
+// convenience constants for working with page table indices
+const (
 	L4MSB  = 47
 	L4LSB  = 39
 	L4Size = L4MSB - L4LSB + 1
@@ -41,40 +44,18 @@ const (
 
 	AddressSize = 48
 
-	tableIndexMask = (1 << tableIndexSize) - 1
+	tableIndexMask        = (1 << tableIndexSize) - 1
+	tableEntryAddressMask = TableEntry((1<<AddressSize - 1) << OffsetSize)
 
 	NumEntries       = PageSize / EntrySize
 	SelfAddressIndex = NumEntries - 1
 
 	NilMapping = TableEntry(0)
+
+	cr3Mask = ^uint64((1<<48 - 1) << 12)
+
+	pageTableFlags = 0xFFF
 )
-
-// NotMappedError is an error returned when requested page is not mapped
-type NotMappedError struct{}
-
-func (nme NotMappedError) Error() string {
-	return "Error: Page not mapped"
-}
-
-// PermissionsError is an error returned when a page is requested with the wrong
-//  permission flags
-type PermissionsError struct {
-	entry TableEntry
-	flags uint64
-}
-
-func (pe *PermissionsError) Error() string {
-	return "Error: Improper page access permissions"
-}
-
-// LoadCR3 is an assembly implementation for loading a page table into the
-//  processor
-func LoadCR3(p Address)
-
-// Load sets a physical address as the current page table to use
-func Load(p Address) {
-	LoadCR3(p)
-}
 
 // PageTable satisfies pagetable.PageTable
 type PageTable struct {
@@ -85,8 +66,24 @@ var _ pagetable.PageTable = &PageTable{}
 
 // Walk traverses this page table using recusive mapping. This page table must
 //  be the page table in use, or Walk will fail
-func (pt *PageTable) Walk() {
-
+func (pt *PageTable) Walk(v, flags uint64) (uint64, error) {
+	addr := Address(v)
+	if pdpt, err := pt.pm.Step(addr, flags); err != nil {
+		// step through the pml4 table to get the page directory pointer table
+		return 0, err
+	} else if pd, err := pdpt.Step(addr, flags); err != nil {
+		// step through the pdpt to get the page directory
+		return 0, err
+	} else if t, err := pd.Step(addr, flags); err != nil {
+		// step through the page directory to get the page table
+		return 0, err
+	} else if te, err := t.Step(addr, flags); err != nil {
+		// step through the page table to get a page table entry
+		return 0, err
+	} else {
+		// extract the physical address from the page table entry
+		return uint64(te.Address().withOffset(addr.offset())), nil
+	}
 }
 
 // Use loads this page table into the processor
@@ -94,54 +91,14 @@ func (pt *PageTable) Use() {
 	Load(pt.pm.Phys())
 }
 
-//Address wraps a 64bit address
-type Address uint64
-
-func (addr Address) withBits(insertion, mask Address) Address {
-	insertion &= mask
-	addr &= ^mask
-	return addr | insertion
+// Load sets a physical address as the current page table to use
+func Load(p Address) {
+	LoadCR3(p)
 }
 
-func (addr Address) getOffset() Address {
-	return addr & 0xFFF
-}
-
-func (addr Address) getL4Index() uint64 {
-	return uint64((addr >> L4LSB) & tableIndexMask)
-}
-
-func (addr Address) withL4Index(idx uint64) Address {
-	return addr.withBits(Address(idx), Address(L4Mask))
-}
-
-func (addr Address) getL3Index() uint64 {
-	return uint64((addr >> L3LSB) & tableIndexMask)
-}
-
-func (addr Address) withL3Index(idx uint64) Address {
-	return addr.withBits(Address(idx), Address(L3Mask))
-}
-
-func (addr Address) getL2Index() uint64 {
-	return uint64((addr >> L2LSB) & tableIndexMask)
-}
-
-func (addr Address) withL2Index(idx uint64) Address {
-	return addr.withBits(Address(idx), Address(L2Mask))
-}
-
-func (addr Address) getL1Index() uint64 {
-	return uint64((addr >> L1LSB) & tableIndexMask)
-}
-
-func (addr Address) withL1Index(idx uint64) Address {
-	return addr.withBits(Address(idx), Address(L1Mask))
-}
-
-func (addr Address) toPointer() unsafe.Pointer {
-	return unsafe.Pointer(uintptr(addr))
-}
+// LoadCR3 is an assembly implementation for loading a page table into the
+//  processor
+func LoadCR3(p Address)
 
 // BaseTable is the base page table type
 type BaseTable [NumEntries]TableEntry
@@ -150,11 +107,11 @@ type BaseTable [NumEntries]TableEntry
 func (bt *BaseTable) Step(idx, flags uint64) (unsafe.Pointer, error) {
 	if te := bt[idx]; te == NilMapping {
 		// check if the mapping exists
-		return nil, NotMappedError{}
+		return nil, pagetable.NotMappedError{}
 
 	} else if !te.HasFlags(flags) {
 		// check if the mapping has the appropriate privileges
-		return nil, &PermissionsError{te, flags}
+		return nil, makePermissionsError(te.Flags())
 
 	}
 	idx = (idx & tableIndexMask) << L1LSB
@@ -163,16 +120,28 @@ func (bt *BaseTable) Step(idx, flags uint64) (unsafe.Pointer, error) {
 	return addr.toPointer(), nil
 }
 
+// GetMapping checks for a mapping at the given index, and adds on if it
+//  does not exist
+func (bt *BaseTable) GetMapping(idx uint64) error {
+	if bt[idx] == NilMapping {
+		if frame, err := mm.AllocFrame(); err == nil {
+			bt[idx] = newTableEntry(
+				Address(frame),
+				pageTableFlags,
+			)
+		} else {
+			// error
+		}
+	}
+	return nil
+}
+
 func (bt *BaseTable) toAddress() Address {
 	return Address(uintptr(unsafe.Pointer(bt)))
 }
 
 // TableEntry is the base type for amd64 page table entries
 type TableEntry uint64
-
-const (
-	tableEntryAddressMask = TableEntry((1<<AddressSize - 1) << OffsetSize)
-)
 
 // Address returns the embedded 48-bit address in a table entry
 func (te *TableEntry) Address() Address {
@@ -201,4 +170,16 @@ func (te *TableEntry) HasFlags(flags uint64) bool {
 // Flags returns the flags for the table entry
 func (te *TableEntry) Flags() uint64 {
 	return uint64(*te & 0xFFF)
+}
+
+// for now just mask off the lower 8 bits
+func makePermissionsError(flags uint64) pagetable.PermissionsError {
+	return pagetable.PermissionsError(flags & 0xFF)
+}
+
+func newTableEntry(addr Address, flags uint64) (entry TableEntry) {
+	te := &entry
+	te.SetAddress(addr)
+	te.SetFlags(flags)
+	return
 }
